@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from bidict import bidict
 
-import hummingbot.connector.exchange.bybit.bybit_constants as CONSTANTS
-import hummingbot.connector.exchange.bybit.bybit_utils as bybit_utils
-import hummingbot.connector.exchange.bybit.bybit_web_utils as web_utils
-from hummingbot.connector.exchange.bybit.bybit_api_order_book_data_source import BybitAPIOrderBookDataSource
-from hummingbot.connector.exchange.bybit.bybit_api_user_stream_data_source import BybitAPIUserStreamDataSource
-from hummingbot.connector.exchange.bybit.bybit_auth import BybitAuth
+import hummingbot.connector.exchange.bitrue.bitrue_constants as CONSTANTS
+import hummingbot.connector.exchange.bitrue.bitrue_utils as bitrue_utils
+import hummingbot.connector.exchange.bitrue.bitrue_web_utils as web_utils
+from hummingbot.connector.exchange.bitrue.bitrue_api_order_book_data_source import BitrueAPIOrderBookDataSource
+from hummingbot.connector.exchange.bitrue.bitrue_api_user_stream_data_source import BitrueAPIUserStreamDataSource
+from hummingbot.connector.exchange.bitrue.bitrue_auth import BitrueAuth
 from hummingbot.connector.exchange_py_base import ExchangePyBase
 from hummingbot.connector.trading_rule import TradingRule
 from hummingbot.connector.utils import combine_to_hb_trading_pair
@@ -29,46 +29,46 @@ s_logger = None
 s_decimal_NaN = Decimal("nan")
 
 
-class BybitExchange(ExchangePyBase):
+class BitrueExchange(ExchangePyBase):
     web_utils = web_utils
 
     def __init__(self,
                  client_config_map: "ClientConfigAdapter",
-                 bybit_api_key: str,
-                 bybit_api_secret: str,
+                 bitrue_api_key: str,
+                 bitrue_api_secret: str,
                  trading_pairs: Optional[List[str]] = None,
                  trading_required: bool = True,
                  domain: str = CONSTANTS.DEFAULT_DOMAIN,
                  ):
-        self.api_key = bybit_api_key
-        self.secret_key = bybit_api_secret
+        self.api_key = bitrue_api_key
+        self.secret_key = bitrue_api_secret
         self._domain = domain
         self._trading_required = trading_required
         self._trading_pairs = trading_pairs
-        self._last_trades_poll_bybit_timestamp = 1.0
+        self._last_trades_poll_bitrue_timestamp = 1.0
         super().__init__(client_config_map)
 
     @staticmethod
-    def bybit_order_type(order_type: OrderType) -> str:
+    def bitrue_order_type(order_type: OrderType) -> str:
         return order_type.name.upper()
 
     @staticmethod
-    def to_hb_order_type(bybit_type: str) -> OrderType:
-        return OrderType[bybit_type]
+    def to_hb_order_type(bitrue_type: str) -> OrderType:
+        return OrderType[bitrue_type]
 
     @property
     def authenticator(self):
-        return BybitAuth(
+        return BitrueAuth(
             api_key=self.api_key,
             secret_key=self.secret_key,
             time_provider=self._time_synchronizer)
 
     @property
     def name(self) -> str:
-        if self._domain == "bybit_main":
-            return "bybit"
+        if self._domain == "bitrue_main":
+            return "bitrue"
         else:
-            return f"bybit_{self._domain}"
+            return f"bitrue_{self._domain}"
 
     @property
     def rate_limits_rules(self):
@@ -141,7 +141,7 @@ class BybitExchange(ExchangePyBase):
             auth=self._auth)
 
     def _create_order_book_data_source(self) -> OrderBookTrackerDataSource:
-        return BybitAPIOrderBookDataSource(
+        return BitrueAPIOrderBookDataSource(
             trading_pairs=self._trading_pairs,
             connector=self,
             domain=self.domain,
@@ -150,7 +150,7 @@ class BybitExchange(ExchangePyBase):
             time_synchronizer=self._time_synchronizer)
 
     def _create_user_stream_data_source(self) -> UserStreamTrackerDataSource:
-        return BybitAPIUserStreamDataSource(
+        return BitrueAPIUserStreamDataSource(
             auth=self._auth,
             throttler=self._throttler,
             time_synchronizer=self._time_synchronizer,
@@ -188,7 +188,7 @@ class BybitExchange(ExchangePyBase):
                            price: Decimal,
                            **kwargs) -> Tuple[str, float]:
         amount_str = f"{amount:f}"
-        type_str = self.bybit_order_type(order_type)
+        type_str = self.bitrue_order_type(order_type)
 
         side_str = CONSTANTS.SIDE_BUY if trade_type is TradeType.BUY else CONSTANTS.SIDE_SELL
         symbol = await self.exchange_symbol_associated_to_pair(trading_pair=trading_pair)
@@ -361,13 +361,13 @@ class BybitExchange(ExchangePyBase):
             exchange_order_id = int(order.exchange_order_id)
             trading_pair = await self.exchange_symbol_associated_to_pair(trading_pair=order.trading_pair)
             all_fills_response = await self._api_get(
-                path_url=CONSTANTS.MY_TRADES_PATH_URL,
+                path_url=CONSTANTS.RECENT_TRADES_LIST,
                 params={
                     "symbol": trading_pair,
                     "orderId": exchange_order_id
                 },
                 is_auth_required=True,
-                limit_id=CONSTANTS.MY_TRADES_PATH_URL)
+                limit_id=CONSTANTS.RECENT_TRADES_LIST)
             fills_data = all_fills_response.get("result", [])
             if fills_data is not None:
                 for trade in fills_data:
@@ -418,7 +418,7 @@ class BybitExchange(ExchangePyBase):
 
         account_info = await self._api_request(
             method=RESTMethod.GET,
-            path_url=CONSTANTS.ACCOUNTS_PATH_URL,
+            path_url=CONSTANTS.ACCOUNT_INFO,
             is_auth_required=True)
         balances = account_info["result"]["balances"]
         for balance_entry in balances:
@@ -436,7 +436,7 @@ class BybitExchange(ExchangePyBase):
 
     def _initialize_trading_pair_symbols_from_exchange_info(self, exchange_info: Dict[str, Any]):
         mapping = bidict()
-        for symbol_data in filter(bybit_utils.is_exchange_information_valid, exchange_info["result"]):
+        for symbol_data in filter(bitrue_utils.is_exchange_information_valid, exchange_info["result"]):
             mapping[symbol_data["name"]] = combine_to_hb_trading_pair(base=symbol_data["baseCurrency"],
                                                                       quote=symbol_data["quoteCurrency"])
         self._set_trading_pair_symbol_map(mapping)
@@ -447,7 +447,7 @@ class BybitExchange(ExchangePyBase):
         }
         resp_json = await self._api_request(
             method=RESTMethod.GET,
-            path_url=CONSTANTS.LAST_TRADED_PRICE_PATH,
+            path_url=CONSTANTS.SYMBOL_PRICE_TICKER,
             params=params,
         )
 

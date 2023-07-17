@@ -23,21 +23,21 @@ def is_exchange_information_valid(exchange_info: Dict[str, Any]) -> bool:
     return exchange_info.get("showStatus") is True
 
 
-class BybitConfigMap(BaseConnectorConfigMap):
-    connector: str = Field(default="bybit", const=True, client_data=None)
-    bybit_api_key: SecretStr = Field(
+class BitrueConfigMap(BaseConnectorConfigMap):
+    connector: str = Field(default="bitrue", const=True, client_data=None)
+    bitrue_api_key: SecretStr = Field(
         default=...,
         client_data=ClientFieldData(
-            prompt=lambda cm: "Enter your Bybit API key",
+            prompt=lambda cm: "Enter your Bitrue API key",
             is_secure=True,
             is_connect_key=True,
             prompt_on_new=True,
         ),
     )
-    bybit_api_secret: SecretStr = Field(
+    bitrue_api_secret: SecretStr = Field(
         default=...,
         client_data=ClientFieldData(
-            prompt=lambda cm: "Enter your Bybit API secret",
+            prompt=lambda cm: "Enter your Bitrue API secret",
             is_secure=True,
             is_connect_key=True,
             prompt_on_new=True,
@@ -45,40 +45,40 @@ class BybitConfigMap(BaseConnectorConfigMap):
     )
 
     class Config:
-        title = "bybit"
+        title = "bitrue"
 
 
-KEYS = BybitConfigMap.construct()
+KEYS = BitrueConfigMap.construct()
 
-OTHER_DOMAINS = ["bybit_testnet"]
-OTHER_DOMAINS_PARAMETER = {"bybit_testnet": "bybit_testnet"}
-OTHER_DOMAINS_EXAMPLE_PAIR = {"bybit_testnet": "BTC-USDT"}
-OTHER_DOMAINS_DEFAULT_FEES = {"bybit_testnet": DEFAULT_FEES}
-
-
-class BybitTestnetConfigMap(BaseConnectorConfigMap):
-    connector: str = Field(default="bybit_testnet", const=True, client_data=None)
-    bybit_testnet_api_key: SecretStr = Field(
-        default=...,
-        client_data=ClientFieldData(
-            prompt=lambda cm: "Enter your Bybit Testnet API Key",
-            is_secure=True,
-            is_connect_key=True,
-            prompt_on_new=True,
-        ),
-    )
-    bybit_testnet_api_secret: SecretStr = Field(
-        default=...,
-        client_data=ClientFieldData(
-            prompt=lambda cm: "Enter your Bybit Testnet API secret",
-            is_secure=True,
-            is_connect_key=True,
-            prompt_on_new=True,
-        )
-    )
-
-    class Config:
-        title = "bybit_testnet"
+# OTHER_DOMAINS = ["bitrue_testnet"]
+# OTHER_DOMAINS_PARAMETER = {"bitrue_testnet": "bitrue_testnet"}
+# OTHER_DOMAINS_EXAMPLE_PAIR = {"bitrue_testnet": "BTC-USDT"}
+# OTHER_DOMAINS_DEFAULT_FEES = {"bitrue_testnet": DEFAULT_FEES}
 
 
-OTHER_DOMAINS_KEYS = {"bybit_testnet": BybitTestnetConfigMap.construct()}
+# class bitrueTestnetConfigMap(BaseConnectorConfigMap):
+#     connector: str = Field(default="bitrue_testnet", const=True, client_data=None)
+#     bitrue_testnet_api_key: SecretStr = Field(
+#         default=...,
+#         client_data=ClientFieldData(
+#             prompt=lambda cm: "Enter your bitrue Testnet API Key",
+#             is_secure=True,
+#             is_connect_key=True,
+#             prompt_on_new=True,
+#         ),
+#     )
+#     bitrue_testnet_api_secret: SecretStr = Field(
+#         default=...,
+#         client_data=ClientFieldData(
+#             prompt=lambda cm: "Enter your bitrue Testnet API secret",
+#             is_secure=True,
+#             is_connect_key=True,
+#             prompt_on_new=True,
+#         )
+#     )
+
+#     class Config:
+#         title = "bitrue_testnet"
+
+
+# OTHER_DOMAINS_KEYS = {"bitrue_testnet": bitrueTestnetConfigMap.construct()}

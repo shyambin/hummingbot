@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, Optional
 
-import hummingbot.connector.exchange.bybit.bybit_constants as CONSTANTS
+import hummingbot.connector.exchange.bitrue.bitrue_constants as CONSTANTS
 from hummingbot.connector.time_synchronizer import TimeSynchronizer
 from hummingbot.connector.utils import TimeSynchronizerRESTPreProcessor
 from hummingbot.core.api_throttler.async_throttler import AsyncThrottler
@@ -9,15 +9,14 @@ from hummingbot.core.web_assistant.connections.data_types import RESTMethod, RES
 from hummingbot.core.web_assistant.web_assistants_factory import WebAssistantsFactory
 
 
-def rest_url(path_url: str, domain: str = CONSTANTS.DEFAULT_DOMAIN) -> str:
+def rest_url(path_url: str) -> str:
     """
     Creates a full URL for provided public REST endpoint
     :param path_url: a public REST endpoint
-    :param domain: the Bybit domain to connect to ("mainnet" or "testnet"). The default value is "mainnet"
+    :param domain: the Bitrue domain to connect to ("mainnet" or "testnet"). The default value is "mainnet"
     :return: the full URL to the endpoint
     """
-    return CONSTANTS.REST_URLS[domain] + path_url
-
+    return CONSTANTS.REST_URLS + path_url
 
 def build_api_factory(
         throttler: Optional[AsyncThrottler] = None,
@@ -77,7 +76,7 @@ async def api_request(path: str,
     local_headers = {
         "Content-Type": "application/x-www-form-urlencoded"}
     local_headers.update(headers)
-    url = rest_url(path, domain=domain)
+    url = rest_url(path)
 
     request = RESTRequest(
         method=method,
@@ -98,7 +97,7 @@ async def api_request(path: str,
             else:
                 error_response = await response.text()
                 if error_response is not None and "ret_code" in error_response and "ret_msg" in error_response:
-                    raise IOError(f"The request to Bybit failed. Error: {error_response}. Request: {request}")
+                    raise IOError(f"The request to Bitrue failed. Error: {error_response}. Request: {request}")
                 else:
                     raise IOError(f"Error executing request {method.name} {path}. "
                                   f"HTTP status is {response.status}. "
