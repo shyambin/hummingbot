@@ -35,12 +35,12 @@ class BitrueAuth(AuthBase):
         request.headers = headers
         return request
 
-    # async def ws_authenticate(self, request: WSRequest) -> WSRequest:
-    #     """
-    #     This method is intended to configure a websocket request to be authenticated. Bitrue does not use this
-    #     functionality
-    #     """
-    #     return request  # pass-through
+    async def ws_authenticate(self, request: WSRequest) -> WSRequest:
+        """
+        This method is intended to configure a websocket request to be authenticated. Bitrue does not use this
+        functionality
+        """
+        return request  # pass-through
 
     # def get_referral_code_headers(self):
     #     """

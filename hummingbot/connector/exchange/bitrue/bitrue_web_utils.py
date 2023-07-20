@@ -9,7 +9,7 @@ from hummingbot.core.web_assistant.connections.data_types import RESTMethod, RES
 from hummingbot.core.web_assistant.web_assistants_factory import WebAssistantsFactory
 
 
-def rest_url(path_url: str) -> str:
+def rest_url(path_url: str, domain: str) -> str:
     """
     Creates a full URL for provided public REST endpoint
     :param path_url: a public REST endpoint
@@ -76,7 +76,7 @@ async def api_request(path: str,
     local_headers = {
         "Content-Type": "application/x-www-form-urlencoded"}
     local_headers.update(headers)
-    url = rest_url(path)
+    url = rest_url(path, domain)
 
     request = RESTRequest(
         method=method,
@@ -118,6 +118,6 @@ async def get_current_server_time(
         throttler=throttler,
         domain=domain,
         method=RESTMethod.GET)
-    server_time = response["result"]["serverTime"]
+    server_time = response["serverTime"]
 
     return server_time

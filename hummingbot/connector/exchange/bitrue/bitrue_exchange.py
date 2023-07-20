@@ -415,11 +415,15 @@ class BitrueExchange(ExchangePyBase):
     async def _update_balances(self):
         local_asset_names = set(self._account_balances.keys())
         remote_asset_names = set()
-
+        data = {
+            # "timestamp": (lambda: web_utils.get_current_server_time(throttler=self._throttler,domain=self._domain)),
+            "timestamp": 1689659507740,
+        }
         account_info = await self._api_request(
             method=RESTMethod.GET,
             path_url=CONSTANTS.ACCOUNT_INFO,
-            is_auth_required=True)
+            is_auth_required=True,
+            data=data)
         balances = account_info["result"]["balances"]
         for balance_entry in balances:
             asset_name = balance_entry["coin"]
@@ -436,19 +440,16 @@ class BitrueExchange(ExchangePyBase):
 
     def _initialize_trading_pair_symbols_from_exchange_info(self, exchange_info: Dict[str, Any]):
         mapping = bidict()
-        for symbol_data in filter(bitrue_utils.is_exchange_information_valid, exchange_info["result"]):
-            mapping[symbol_data["name"]] = combine_to_hb_trading_pair(base=symbol_data["baseCurrency"],
-                                                                      quote=symbol_data["quoteCurrency"])
+        for symbol_data in filter(bitrue_utils.is_exchange_information_valid, exchange_info["symbols"]):
+            mapping[symbol_data["symbol"]] = combine_to_hb_trading_pair(base=symbol_data["baseAsset"],
+                                                                      quote=symbol_data["quoteAsset"])
         self._set_trading_pair_symbol_map(mapping)
 
     async def _get_last_traded_price(self, trading_pair: str) -> float:
-        params = {
-            "symbol": await self.exchange_symbol_associated_to_pair(trading_pair=trading_pair),
-        }
+
         resp_json = await self._api_request(
             method=RESTMethod.GET,
             path_url=CONSTANTS.SYMBOL_PRICE_TICKER,
-            params=params,
         )
 
         return float(resp_json["result"]["price"])
