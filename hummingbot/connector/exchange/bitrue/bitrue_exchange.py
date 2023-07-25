@@ -1,17 +1,15 @@
 import asyncio
-from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
-
-import requests
-import json
-from collections import OrderedDict
-from urllib.parse import urlencode
-import hmac
 import hashlib
-
+import hmac
+import json
 import time
 from base64 import b64encode
+from collections import OrderedDict
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from urllib.parse import urlencode
 
+import requests
 from bidict import bidict
 
 import hummingbot.connector.exchange.bitrue.bitrue_constants as CONSTANTS
@@ -448,6 +446,7 @@ class BitrueExchange(ExchangePyBase):
         return digest
 
     async def _update_balances(self):
+        print("inside update_balances func")
         local_asset_names = set(self._account_balances.keys())
         remote_asset_names = set()
         # timestamp2 = int(self._time_synchronizer.time() * 1e3)
@@ -460,16 +459,44 @@ class BitrueExchange(ExchangePyBase):
 
         params = self._generate_signature(params=data)
 
-        account_info = await self._api_request(
-            method=RESTMethod.GET,
-            path_url=CONSTANTS.ACCOUNT_INFO,
-            is_auth_required=False,
-            data=data,
-            params={"signature": params}
-            )
-        # balances = account_info["result"]["balances"]
-        balances = account_info["balances"]
+        # account_info = await self._api_request(
+        #     method=RESTMethod.GET,
+        #     path_url=CONSTANTS.ACCOUNT_INFO,
+        #     is_auth_required=False,
+        #     data=data,
+        #     params={"signature": params}
+        #     )
+        account_info = {}
+        url = web_utils.rest_url(CONSTANTS.ACCOUNT_INFO, domain=self.domain)
+        print(f"url ======> {url}")
+        local_headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-MBX-APIKEY": self.api_key
+        }
 
+        url = self.generate_payload(RESTMethod.GET, url, {"signature": params})
+        print(f"url ======> {url}")
+
+        try:
+            response = requests.get(url, data=data, headers=local_headers)
+
+            if response.status_code == 200:
+                print(f"response.json ======> {response.json()}")
+                account_info=response.json()
+            else:
+                print(f'Error: {response.status_code} - {response.text}')
+        except IOError as request_exception:
+            last_exception = request_exception
+            if self._is_request_exception_related_to_time_synchronizer(request_exception=request_exception):
+                self._time_synchronizer.clear_time_offset_ms_samples()
+                await self._update_time_synchronizer()
+            else:
+                raise
+
+        # balances = account_info["result"]["balances"]
+        print(f"account_info ========> {account_info}")
+
+        balances = account_info["balances"]
 
         for balance_entry in balances:
             asset_name = balance_entry["asset"]
@@ -531,36 +558,22 @@ class BitrueExchange(ExchangePyBase):
             "X-MBX-APIKEY": self.api_key
         }
 
-        url = self.generate_payload(method, url, params)
+        # url = self.generate_payload(method, url, params)
 
-        # for _ in range(2):
-        #     try:
-        #         request_result = await rest_assistant.execute_request(
-        #             url=url,
-        #             params=params,
-        #             data=data,
-        #             method=method,
-        #             is_auth_required=is_auth_required,
-        #             return_err=return_err,
-        #             headers=local_headers,
-        #             throttler_limit_id=limit_id if limit_id else path_url,
-        #         )
-        #         return request_result
-        #     except IOError as request_exception:
-        #         last_exception = request_exception
-        #         if self._is_request_exception_related_to_time_synchronizer(request_exception=request_exception):
-        #             self._time_synchronizer.clear_time_offset_ms_samples()
-        #             await self._update_time_synchronizer()
-        #         else:
-        #             raise
+        print(f"url ========> {url}")
+        print(f"data ========> {data}")
         try:
-            response = requests.get(url, data=data, headers=local_headers)
-
-            if response.status_code == 200:
-                # print(response.json())
-                return response.json()
-            else:
-                print(f'Error: {response.status_code} - {response.text}')
+            request_result = await rest_assistant.execute_request(
+                url=url,
+                params=params,
+                data=data,
+                method=method,
+                is_auth_required=is_auth_required,
+                return_err=return_err,
+                headers=local_headers,
+                throttler_limit_id=limit_id if limit_id else path_url,
+            )
+            return request_result
         except IOError as request_exception:
             last_exception = request_exception
             if self._is_request_exception_related_to_time_synchronizer(request_exception=request_exception):
@@ -568,5 +581,20 @@ class BitrueExchange(ExchangePyBase):
                 await self._update_time_synchronizer()
             else:
                 raise
+        # try:
+        #     response = requests.get(url, data=data, headers=local_headers)
+
+        #     if response.status_code == 200:
+        #         # print(response.json())
+        #         return response.json()
+        #     else:
+        #         print(f'Error: {response.status_code} - {response.text}')
+        # except IOError as request_exception:
+        #     last_exception = request_exception
+        #     if self._is_request_exception_related_to_time_synchronizer(request_exception=request_exception):
+        #         self._time_synchronizer.clear_time_offset_ms_samples()
+        #         await self._update_time_synchronizer()
+        #     else:
+        #         raise
         # Failed even after the last retry
         raise last_exception
