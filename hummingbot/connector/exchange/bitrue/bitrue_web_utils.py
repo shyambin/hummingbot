@@ -119,5 +119,4 @@ async def get_current_server_time(
         domain=domain,
         method=RESTMethod.GET)
     server_time = response["serverTime"]
-
     return server_time

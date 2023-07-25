@@ -2,6 +2,16 @@ import asyncio
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
+import requests
+import json
+from collections import OrderedDict
+from urllib.parse import urlencode
+import hmac
+import hashlib
+
+import time
+from base64 import b64encode
+
 from bidict import bidict
 
 import hummingbot.connector.exchange.bitrue.bitrue_constants as CONSTANTS
@@ -412,19 +422,53 @@ class BitrueExchange(ExchangePyBase):
 
         return order_update
 
+    @staticmethod
+    def keysort(dictionary: Dict[str, str]) -> Dict[str, str]:
+        return OrderedDict(sorted(dictionary.items(), key=lambda t: t[0]))
+
+    def get_server_time(self):
+        url = 'https://openapi.bitrue.com/api/v1/time'
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()['serverTime']
+        else:
+            print(f'Error: {response.status_code} - {response.text}')
+            return None
+
+    def _generate_signature(self, params: Dict[str, Any]) -> str:
+        # params = self.keysort(params)
+        encoded_params_str = urlencode(params)
+        print(f"secret key =======> {self.secret_key}")
+        print(f"secret key encoded =======> {self.secret_key.encode('utf-8')}")
+        print(f"params string =======> {encoded_params_str}")
+        print(f"params string encoded =======> {encoded_params_str.encode('utf-8')}")
+        digest = hmac.new(self.secret_key.encode('utf-8'), msg=encoded_params_str.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
+        # digest = hmac.new(self.secret_key.encode("utf-8"), encoded_params_str.encode("utf-8"), hashlib.sha256).hexdigest()
+        # print(f"digest ========> {digest}")
+        return digest
+
     async def _update_balances(self):
         local_asset_names = set(self._account_balances.keys())
         remote_asset_names = set()
+        # timestamp2 = int(self._time_synchronizer.time() * 1e3)
+        # print(f"timestamp2 ========> {timestamp2}")
+        timestamp = self.get_server_time()
         data = {
-            # "timestamp": (lambda: web_utils.get_current_server_time(throttler=self._throttler,domain=self._domain)),
-            "timestamp": 1689659507740,
+            "symbol": "LTCBTC",
+            "timestamp": timestamp
         }
+
+        params = self._generate_signature(params=data)
+
         account_info = await self._api_request(
             method=RESTMethod.GET,
             path_url=CONSTANTS.ACCOUNT_INFO,
-            is_auth_required=True,
-            data=data)
-        balances = account_info["result"]["balances"]
+            is_auth_required=False,
+            data=data,
+            params={"signature": params}
+            )
+        # balances = account_info["result"]["balances"]
+        balances = account_info["balances"]
         for balance_entry in balances:
             asset_name = balance_entry["coin"]
             free_balance = Decimal(balance_entry["free"])
@@ -454,6 +498,21 @@ class BitrueExchange(ExchangePyBase):
 
         return float(resp_json["result"]["price"])
 
+    def generate_payload(
+        self,
+        method: str,
+        url: str,
+        params: Dict[str, Any] = None,
+    ):
+        if params is not None and len(params) > 0:
+            query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+            print(f"query string ========> {query_string}")
+
+            url = f"{url}?{query_string}"
+            print(f"url from payload func ========> {url}")
+            return url
+
+
     async def _api_request(self,
                            path_url,
                            method: RESTMethod = RESTMethod.GET,
@@ -468,27 +527,42 @@ class BitrueExchange(ExchangePyBase):
         rest_assistant = await self._web_assistants_factory.get_rest_assistant()
         url = web_utils.rest_url(path_url, domain=self.domain)
         local_headers = {
-            "Content-Type": "application/x-www-form-urlencoded"}
-        for _ in range(2):
-            try:
-                request_result = await rest_assistant.execute_request(
-                    url=url,
-                    params=params,
-                    data=data,
-                    method=method,
-                    is_auth_required=is_auth_required,
-                    return_err=return_err,
-                    headers=local_headers,
-                    throttler_limit_id=limit_id if limit_id else path_url,
-                )
-                return request_result
-            except IOError as request_exception:
-                last_exception = request_exception
-                if self._is_request_exception_related_to_time_synchronizer(request_exception=request_exception):
-                    self._time_synchronizer.clear_time_offset_ms_samples()
-                    await self._update_time_synchronizer()
-                else:
-                    raise
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-MBX-APIKEY": self.api_key
+        }
 
+        url = self.generate_payload(method, url, params)
+        print(f"data ======> {data}")
+        print(f"local headers =======> {local_headers}")
+        print(f"params =========> {params}")
+        print(f"url ========> {url}")
+        print(f"throttler limit id ==========> {limit_id}")
+        # for _ in range(2):
+        #     try:
+        #         request_result = await rest_assistant.execute_request(
+        #             url=url,
+        #             params=params,
+        #             data=data,
+        #             method=method,
+        #             is_auth_required=is_auth_required,
+        #             return_err=return_err,
+        #             headers=local_headers,
+        #             throttler_limit_id=limit_id if limit_id else path_url,
+        #         )
+        #         return request_result
+        #     except IOError as request_exception:
+        #         last_exception = request_exception
+        #         if self._is_request_exception_related_to_time_synchronizer(request_exception=request_exception):
+        #             self._time_synchronizer.clear_time_offset_ms_samples()
+        #             await self._update_time_synchronizer()
+        #         else:
+        #             raise
+
+        response = requests.get(url, data=data, headers=local_headers)
+
+        if response.status_code == 200:
+            print(response.json())
+        else:
+            print(f'Error: {response.status_code} - {response.text}')
         # Failed even after the last retry
         raise last_exception

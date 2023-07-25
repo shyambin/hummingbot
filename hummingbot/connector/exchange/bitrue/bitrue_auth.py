@@ -57,15 +57,18 @@ class BitrueAuth(AuthBase):
         timestamp = int(self.time_provider.time() * 1e3)
         request_params = params or {}
         request_params["timestamp"] = timestamp
-        request_params["api_key"] = self.api_key
+        # request_params["api_key"] = self.api_key
+        symbol = 'LTCBTC'
+        request_params["symbol"] = symbol
         request_params = self.keysort(request_params)
         signature = self._generate_signature(params=request_params)
-        request_params["sign"] = signature
+        request_params["signature"] = signature
         return request_params
 
     def _generate_signature(self, params: Dict[str, Any]) -> str:
         encoded_params_str = urlencode(params)
         digest = hmac.new(self.secret_key.encode("utf8"), encoded_params_str.encode("utf8"), hashlib.sha256).hexdigest()
+        # print(f"digest ========> {digest}")
         return digest
 
     # def generate_ws_authentication_message(self):
