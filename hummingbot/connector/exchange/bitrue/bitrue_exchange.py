@@ -438,10 +438,10 @@ class BitrueExchange(ExchangePyBase):
     def _generate_signature(self, params: Dict[str, Any]) -> str:
         # params = self.keysort(params)
         encoded_params_str = urlencode(params)
-        print(f"secret key =======> {self.secret_key}")
-        print(f"secret key encoded =======> {self.secret_key.encode('utf-8')}")
-        print(f"params string =======> {encoded_params_str}")
-        print(f"params string encoded =======> {encoded_params_str.encode('utf-8')}")
+        # print(f"secret key =======> {self.secret_key}")
+        # print(f"secret key encoded =======> {self.secret_key.encode('utf-8')}")
+        # print(f"params string =======> {encoded_params_str}")
+        # print(f"params string encoded =======> {encoded_params_str.encode('utf-8')}")
         digest = hmac.new(self.secret_key.encode('utf-8'), msg=encoded_params_str.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
         # digest = hmac.new(self.secret_key.encode("utf-8"), encoded_params_str.encode("utf-8"), hashlib.sha256).hexdigest()
         # print(f"digest ========> {digest}")
@@ -454,7 +454,7 @@ class BitrueExchange(ExchangePyBase):
         # print(f"timestamp2 ========> {timestamp2}")
         timestamp = self.get_server_time()
         data = {
-            "symbol": "LTCBTC",
+            "symbol": "MNTLUSDT",
             "timestamp": timestamp
         }
 
@@ -469,10 +469,12 @@ class BitrueExchange(ExchangePyBase):
             )
         # balances = account_info["result"]["balances"]
         balances = account_info["balances"]
+
+
         for balance_entry in balances:
-            asset_name = balance_entry["coin"]
+            asset_name = balance_entry["asset"]
             free_balance = Decimal(balance_entry["free"])
-            total_balance = Decimal(balance_entry["total"])
+            total_balance = Decimal(str(balance_entry["locked"])) + Decimal(str(balance_entry["free"]))
             self._account_available_balances[asset_name] = free_balance
             self._account_balances[asset_name] = total_balance
             remote_asset_names.add(asset_name)
@@ -506,10 +508,8 @@ class BitrueExchange(ExchangePyBase):
     ):
         if params is not None and len(params) > 0:
             query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-            print(f"query string ========> {query_string}")
 
             url = f"{url}?{query_string}"
-            print(f"url from payload func ========> {url}")
             return url
 
 
@@ -532,11 +532,7 @@ class BitrueExchange(ExchangePyBase):
         }
 
         url = self.generate_payload(method, url, params)
-        print(f"data ======> {data}")
-        print(f"local headers =======> {local_headers}")
-        print(f"params =========> {params}")
-        print(f"url ========> {url}")
-        print(f"throttler limit id ==========> {limit_id}")
+
         # for _ in range(2):
         #     try:
         #         request_result = await rest_assistant.execute_request(
@@ -557,12 +553,20 @@ class BitrueExchange(ExchangePyBase):
         #             await self._update_time_synchronizer()
         #         else:
         #             raise
+        try:
+            response = requests.get(url, data=data, headers=local_headers)
 
-        response = requests.get(url, data=data, headers=local_headers)
-
-        if response.status_code == 200:
-            print(response.json())
-        else:
-            print(f'Error: {response.status_code} - {response.text}')
+            if response.status_code == 200:
+                # print(response.json())
+                return response.json()
+            else:
+                print(f'Error: {response.status_code} - {response.text}')
+        except IOError as request_exception:
+            last_exception = request_exception
+            if self._is_request_exception_related_to_time_synchronizer(request_exception=request_exception):
+                self._time_synchronizer.clear_time_offset_ms_samples()
+                await self._update_time_synchronizer()
+            else:
+                raise
         # Failed even after the last retry
         raise last_exception
