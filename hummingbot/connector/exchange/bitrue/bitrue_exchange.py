@@ -195,6 +195,7 @@ class BitrueExchange(ExchangePyBase):
                            order_type: OrderType,
                            price: Decimal,
                            **kwargs) -> Tuple[str, float]:
+        print("inside _place_order_func")
         amount_str = f"{amount:f}"
         type_str = self.bitrue_order_type(order_type)
 
@@ -223,6 +224,7 @@ class BitrueExchange(ExchangePyBase):
         return (o_id, transact_time)
 
     async def _place_cancel(self, order_id: str, tracked_order: InFlightOrder):
+        print("inside _place_cancel")
         api_params = {}
         if tracked_order.exchange_order_id:
             api_params["orderId"] = tracked_order.exchange_order_id
@@ -311,6 +313,7 @@ class BitrueExchange(ExchangePyBase):
         stream data source. It keeps reading events from the queue until the task is interrupted.
         The events received are balance updates, order updates and trade events.
         """
+        print("inside _user_stream_event_listener")
         async for event_message in self._iter_user_event_queue():
             try:
                 event_type = event_message.get("e")
@@ -402,6 +405,7 @@ class BitrueExchange(ExchangePyBase):
         return trade_updates
 
     async def _request_order_status(self, tracked_order: InFlightOrder) -> OrderUpdate:
+        print("inside _request_order_status")
         updated_order_data = await self._api_get(
             path_url=CONSTANTS.ORDER_PATH_URL,
             params={
@@ -436,21 +440,12 @@ class BitrueExchange(ExchangePyBase):
     def _generate_signature(self, params: Dict[str, Any]) -> str:
         # params = self.keysort(params)
         encoded_params_str = urlencode(params)
-        # print(f"secret key =======> {self.secret_key}")
-        # print(f"secret key encoded =======> {self.secret_key.encode('utf-8')}")
-        # print(f"params string =======> {encoded_params_str}")
-        # print(f"params string encoded =======> {encoded_params_str.encode('utf-8')}")
         digest = hmac.new(self.secret_key.encode('utf-8'), msg=encoded_params_str.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
-        # digest = hmac.new(self.secret_key.encode("utf-8"), encoded_params_str.encode("utf-8"), hashlib.sha256).hexdigest()
-        # print(f"digest ========> {digest}")
         return digest
 
     async def _update_balances(self):
-        print("inside update_balances func")
         local_asset_names = set(self._account_balances.keys())
         remote_asset_names = set()
-        # timestamp2 = int(self._time_synchronizer.time() * 1e3)
-        # print(f"timestamp2 ========> {timestamp2}")
         timestamp = self.get_server_time()
         data = {
             "symbol": "MNTLUSDT",
@@ -468,20 +463,17 @@ class BitrueExchange(ExchangePyBase):
         #     )
         account_info = {}
         url = web_utils.rest_url(CONSTANTS.ACCOUNT_INFO, domain=self.domain)
-        print(f"url ======> {url}")
         local_headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "X-MBX-APIKEY": self.api_key
         }
 
         url = self.generate_payload(RESTMethod.GET, url, {"signature": params})
-        print(f"url ======> {url}")
 
         try:
             response = requests.get(url, data=data, headers=local_headers)
 
             if response.status_code == 200:
-                print(f"response.json ======> {response.json()}")
                 account_info=response.json()
             else:
                 print(f'Error: {response.status_code} - {response.text}')
@@ -494,7 +486,6 @@ class BitrueExchange(ExchangePyBase):
                 raise
 
         # balances = account_info["result"]["balances"]
-        print(f"account_info ========> {account_info}")
 
         balances = account_info["balances"]
 
@@ -560,8 +551,6 @@ class BitrueExchange(ExchangePyBase):
 
         # url = self.generate_payload(method, url, params)
 
-        print(f"url ========> {url}")
-        print(f"data ========> {data}")
         try:
             request_result = await rest_assistant.execute_request(
                 url=url,

@@ -6,27 +6,27 @@ from hummingbot.core.data_type.order_book_message import OrderBookMessage, Order
 
 
 class BitrueOrderBook(OrderBook):
-    @classmethod
-    def snapshot_message_from_exchange_websocket(cls,
-                                                 msg: Dict[str, any],
-                                                 timestamp: float,
-                                                 metadata: Optional[Dict] = None) -> OrderBookMessage:
-        """
-        Creates a snapshot message with the order book snapshot message
-        :param msg: the response from the exchange when requesting the order book snapshot
-        :param timestamp: the snapshot timestamp
-        :param metadata: a dictionary with extra information to add to the snapshot data
-        :return: a snapshot message with the snapshot information received from the exchange
-        """
-        if metadata:
-            msg.update(metadata)
-        ts = msg["t"]
-        return OrderBookMessage(OrderBookMessageType.SNAPSHOT, {
-            "trading_pair": msg["trading_pair"],
-            "update_id": ts,
-            "bids": msg["b"],
-            "asks": msg["a"]
-        }, timestamp=timestamp)
+    # @classmethod
+    # def snapshot_message_from_exchange_websocket(cls,
+    #                                              msg: Dict[str, any],
+    #                                              timestamp: float,
+    #                                              metadata: Optional[Dict] = None) -> OrderBookMessage:
+    #     """
+    #     Creates a snapshot message with the order book snapshot message
+    #     :param msg: the response from the exchange when requesting the order book snapshot
+    #     :param timestamp: the snapshot timestamp
+    #     :param metadata: a dictionary with extra information to add to the snapshot data
+    #     :return: a snapshot message with the snapshot information received from the exchange
+    #     """
+    #     if metadata:
+    #         msg.update(metadata)
+    #     ts = msg["t"]
+    #     return OrderBookMessage(OrderBookMessageType.SNAPSHOT, {
+    #         "trading_pair": msg["trading_pair"],
+    #         "update_id": ts,
+    #         "bids": msg["b"],
+    #         "asks": msg["a"]
+    #     }, timestamp=timestamp)
 
     @classmethod
     def snapshot_message_from_exchange_rest(cls,
@@ -42,13 +42,29 @@ class BitrueOrderBook(OrderBook):
         """
         if metadata:
             msg.update(metadata)
-        ts = msg["time"]
-        return OrderBookMessage(OrderBookMessageType.SNAPSHOT, {
+        ts = msg["lastUpdateId"]
+        parsed_data = {
             "trading_pair": msg["trading_pair"],
             "update_id": ts,
-            "bids": msg["bids"],
-            "asks": msg["asks"]
-        }, timestamp=timestamp)
+            # "bids": msg["bids"],
+            # "asks": msg["asks"]
+            "bids": [[bid[0], bid[1]] for bid in msg["bids"]],
+            "asks": [[ask[0], ask[1]] for ask in msg["asks"]],
+
+        }
+        snapshot_timestamp = timestamp
+        order_book_msg: OrderBookMessage = OrderBookMessage(
+            OrderBookMessageType.SNAPSHOT, parsed_data, snapshot_timestamp
+        )
+        # return OrderBookMessage(OrderBookMessageType.SNAPSHOT, {
+        #     "trading_pair": msg["trading_pair"],
+        #     "update_id": ts,
+        #     # "bids": msg["bids"],
+        #     # "asks": msg["asks"]
+        #     "bids": [(bid[0], bid[1]) for bid in msg["bids"]],
+        #     "asks": [(ask[0], ask[1]) for ask in msg["asks"]],
+        # }, timestamp=timestamp)
+        return order_book_msg
 
     @classmethod
     def diff_message_from_exchange(cls,
@@ -62,6 +78,7 @@ class BitrueOrderBook(OrderBook):
         :param metadata: a dictionary with extra information to add to the difference data
         :return: a diff message with the changes in the order book notified by the exchange
         """
+        print("inside diff_message_from_exchange func")
         if metadata:
             msg.update(metadata)
         ts = msg["t"]
@@ -80,6 +97,7 @@ class BitrueOrderBook(OrderBook):
         :param metadata: a dictionary with extra information to add to trade message
         :return: a trade message with the details of the trade as provided by the exchange
         """
+        print("inside trade_message_from_exchange func")
         if metadata:
             msg.update(metadata)
         ts = msg["t"]

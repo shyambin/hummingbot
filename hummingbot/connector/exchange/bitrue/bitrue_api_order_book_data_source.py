@@ -64,22 +64,28 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
         :return: the response from the exchange (JSON dictionary)
         """
         params = {
-            "symbol": await self._connector.exchange_symbol_associated_to_pair(trading_pair=trading_pair),
+            # "symbol": await self._connector.exchange_symbol_associated_to_pair(trading_pair=trading_pair),
+            "symbol": "MNTLUSDT",
             "limit": "1000"
         }
+
         data = await self._connector._api_request(path_url=CONSTANTS.ORDER_BOOK,
                                                   method=RESTMethod.GET,
                                                   params=params)
-        return data['result']
+
+        return data
 
     async def _order_book_snapshot(self, trading_pair: str) -> OrderBookMessage:
         snapshot: Dict[str, Any] = await self._request_order_book_snapshot(trading_pair)
-        snapshot_timestamp: float = float(snapshot["time"]) * 1e-3
+        # snapshot_timestamp: float = float(snapshot["lastUpdateId"]) * 1e-3
+        # snapshot_timestamp = snapshot["lastUpdateId"]
+        snapshot_timestamp: float = time.time()
         snapshot_msg: OrderBookMessage = BitrueOrderBook.snapshot_message_from_exchange_rest(
             snapshot,
             snapshot_timestamp,
             metadata={"trading_pair": trading_pair}
         )
+        print(f"snapshot_msg ===========> {snapshot_msg}")
         return snapshot_msg
 
     async def _parse_trade_message(self, raw_message: Dict[str, Any], message_queue: asyncio.Queue):
@@ -225,15 +231,18 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 raise
 
     async def _take_full_order_book_snapshot(self, trading_pairs: List[str], snapshot_queue: asyncio.Queue):
+        print("inside _take_full_order_book_snapshot function")
         for trading_pair in trading_pairs:
             try:
                 snapshot: Dict[str, Any] = await self._request_order_book_snapshot(trading_pair=trading_pair)
-                snapshot_timestamp: float = float(snapshot["time"]) * 1e-3
+                # snapshot_timestamp = snapshot["lastUpdateId"]
+                snapshot_timestamp: float = time.time()
                 snapshot_msg: OrderBookMessage = BitrueOrderBook.snapshot_message_from_exchange_rest(
                     snapshot,
                     snapshot_timestamp,
                     metadata={"trading_pair": trading_pair}
                 )
+                print(f"snapshot_msg ========> {snapshot_msg}")
                 snapshot_queue.put_nowait(snapshot_msg)
                 self.logger().debug(f"Saved order book snapshot for {trading_pair}")
             except asyncio.CancelledError:
