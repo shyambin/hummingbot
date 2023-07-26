@@ -6,27 +6,29 @@ from hummingbot.core.data_type.order_book_message import OrderBookMessage, Order
 
 
 class BitrueOrderBook(OrderBook):
-    # @classmethod
-    # def snapshot_message_from_exchange_websocket(cls,
-    #                                              msg: Dict[str, any],
-    #                                              timestamp: float,
-    #                                              metadata: Optional[Dict] = None) -> OrderBookMessage:
-    #     """
-    #     Creates a snapshot message with the order book snapshot message
-    #     :param msg: the response from the exchange when requesting the order book snapshot
-    #     :param timestamp: the snapshot timestamp
-    #     :param metadata: a dictionary with extra information to add to the snapshot data
-    #     :return: a snapshot message with the snapshot information received from the exchange
-    #     """
-    #     if metadata:
-    #         msg.update(metadata)
-    #     ts = msg["t"]
-    #     return OrderBookMessage(OrderBookMessageType.SNAPSHOT, {
-    #         "trading_pair": msg["trading_pair"],
-    #         "update_id": ts,
-    #         "bids": msg["b"],
-    #         "asks": msg["a"]
-    #     }, timestamp=timestamp)
+    @classmethod
+    def snapshot_message_from_exchange_websocket(cls,
+                                                 msg: Dict[str, any],
+                                                 timestamp: float,
+                                                 metadata: Optional[Dict] = None) -> OrderBookMessage:
+        """
+        Creates a snapshot message with the order book snapshot message
+        :param msg: the response from the exchange when requesting the order book snapshot
+        :param timestamp: the snapshot timestamp
+        :param metadata: a dictionary with extra information to add to the snapshot data
+        :return: a snapshot message with the snapshot information received from the exchange
+        """
+        print("inside snapshot_message_from_exchange_websocket")
+        print(f"message ======> {msg}")
+        if metadata:
+            msg.update(metadata)
+        ts = msg["ts"]
+        return OrderBookMessage(OrderBookMessageType.SNAPSHOT, {
+            "trading_pair": msg["trading_pair"],
+            "update_id": ts,
+            "bids": msg["tick"]["buys"],
+            "asks": msg["tick"]["asks"]
+        }, timestamp=timestamp)
 
     @classmethod
     def snapshot_message_from_exchange_rest(cls,
