@@ -135,7 +135,7 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
         while True:
             try:
                 ws: WSAssistant = await self._api_factory.get_ws_assistant()
-                # print(f"ws =======> {ws}")
+                print(f"ws =======> {ws}")
                 await ws.connect(ws_url=CONSTANTS.WSS_URL)
                 await self._subscribe_channels(ws)
                 self._last_ws_message_sent_timestamp = self._time()
@@ -144,12 +144,14 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
                     try:
                         seconds_until_next_ping = (CONSTANTS.WS_HEARTBEAT_TIME_INTERVAL - (
                             self._time() - self._last_ws_message_sent_timestamp))
+
                         await asyncio.wait_for(self._process_ws_messages(ws=ws), timeout=seconds_until_next_ping)
                     except asyncio.TimeoutError:
                         ping_time = self._time()
                         payload = {
                             "ping": int(ping_time * 1e3)
                         }
+                        print("inside exception code.................")
                         ping_request = WSJSONRequest(payload=payload)
                         await ws.send(request=ping_request)
                         self._last_ws_message_sent_timestamp = ping_time
@@ -235,6 +237,7 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
             JSONdata = json.loads(my_json)
             if JSONdata.get("status") == "ok":
                 continue
+
             self._message_queue[CONSTANTS.SNAPSHOT_EVENT_TYPE].put_nowait(JSONdata)
 
 
@@ -247,6 +250,7 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 # trading_pair = await self._connector.trading_pair_associated_to_exchange_symbol(
                 #     symbol=json_msg["symbol"])
                 trading_pair = "MNTL-USDT"
+                print(f"json_msg =======> {json_msg}")
                 order_book_message: OrderBookMessage = BitrueOrderBook.snapshot_message_from_exchange_websocket(
                     json_msg, json_msg["ts"], {"trading_pair": trading_pair})
                 snapshot_queue.put_nowait(order_book_message)
