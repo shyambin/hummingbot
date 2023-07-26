@@ -18,8 +18,6 @@ class BitrueOrderBook(OrderBook):
         :param metadata: a dictionary with extra information to add to the snapshot data
         :return: a snapshot message with the snapshot information received from the exchange
         """
-        print("inside snapshot_message_from_exchange_websocket")
-        print(f"message ======> {msg}")
         if metadata:
             msg.update(metadata)
         ts = msg["ts"]

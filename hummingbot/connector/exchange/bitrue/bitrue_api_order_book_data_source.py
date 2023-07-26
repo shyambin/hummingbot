@@ -130,12 +130,12 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
         Connects to the trade events and order diffs websocket endpoints and listens to the messages sent by the
         exchange. Each message is stored in its own queue.
         """
-        print("websocket = inside listen_for_subscriptions func")
+        # print("websocket = inside listen_for_subscriptions func")
         ws = None
         while True:
             try:
                 ws: WSAssistant = await self._api_factory.get_ws_assistant()
-                print(f"ws =======> {ws}")
+                # print(f"ws =======> {ws}")
                 await ws.connect(ws_url=CONSTANTS.WSS_URL)
                 await self._subscribe_channels(ws)
                 self._last_ws_message_sent_timestamp = self._time()
@@ -171,7 +171,7 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
         Subscribes to the trade events and diff orders events through the provided websocket connection.
         :param ws: the websocket assistant used to connect to the exchange
         """
-        print(f"websocket inside _subscribe_channels func")
+        # print(f"websocket inside _subscribe_channels func")
         # print(f"self trading_pairs ========> {self._trading_pairs}")
         try:
             for trading_pair in self._trading_pairs:
@@ -227,7 +227,6 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
             raise
 
     async def _process_ws_messages(self, ws: WSAssistant):
-        print("inside _process_ws_messages func")
         async for ws_response in ws.iter_messages():
             data = ws_response.data
             dec_gzipped_data = gzip.decompress(data)
@@ -242,18 +241,22 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
 
     async def _process_ob_snapshot(self, snapshot_queue: asyncio.Queue):
-        print("inside _process_ob_snapshot function")
         message_queue = self._message_queue[CONSTANTS.SNAPSHOT_EVENT_TYPE]
         while True:
             try:
                 json_msg = await message_queue.get()
                 # trading_pair = await self._connector.trading_pair_associated_to_exchange_symbol(
                 #     symbol=json_msg["symbol"])
-                trading_pair = "MNTL-USDT"
-                print(f"json_msg =======> {json_msg}")
-                order_book_message: OrderBookMessage = BitrueOrderBook.snapshot_message_from_exchange_websocket(
-                    json_msg, json_msg["ts"], {"trading_pair": trading_pair})
-                snapshot_queue.put_nowait(order_book_message)
+
+                if "ping" not in json_msg:
+                    print("message contains timestamp, metadata and all, so processing this message")
+                    trading_pair = "MNTL-USDT"
+                    order_book_message: OrderBookMessage = BitrueOrderBook.snapshot_message_from_exchange_websocket(
+                        json_msg, json_msg["ts"], {"trading_pair": trading_pair})
+                    snapshot_queue.put_nowait(order_book_message)
+                else:
+                    print("message contains ping key, so skipping that message")
+
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -261,7 +264,6 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
                 raise
 
     async def _take_full_order_book_snapshot(self, trading_pairs: List[str], snapshot_queue: asyncio.Queue):
-        print("inside _take_full_order_book_snapshot function")
         for trading_pair in trading_pairs:
             try:
                 snapshot: Dict[str, Any] = await self._request_order_book_snapshot(trading_pair=trading_pair)
