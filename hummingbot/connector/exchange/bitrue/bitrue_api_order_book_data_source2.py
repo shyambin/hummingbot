@@ -131,41 +131,40 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
         exchange. Each message is stored in its own queue.
         """
         # print("websocket = inside listen_for_subscriptions func")
-        pass
-        # ws = None
-        # while True:
-        #     try:
-        #         ws: WSAssistant = await self._api_factory.get_ws_assistant()
-        #         # print(f"ws =======> {ws}")
-        #         await ws.connect(ws_url=CONSTANTS.WSS_URL)
-        #         await self._subscribe_channels(ws)
-        #         self._last_ws_message_sent_timestamp = self._time()
+        ws = None
+        while True:
+            try:
+                ws: WSAssistant = await self._api_factory.get_ws_assistant()
+                # print(f"ws =======> {ws}")
+                await ws.connect(ws_url=CONSTANTS.WSS_URL)
+                await self._subscribe_channels(ws)
+                self._last_ws_message_sent_timestamp = self._time()
 
-        #         while True:
-        #             try:
-        #                 seconds_until_next_ping = (CONSTANTS.WS_HEARTBEAT_TIME_INTERVAL - (
-        #                     self._time() - self._last_ws_message_sent_timestamp))
+                while True:
+                    try:
+                        seconds_until_next_ping = (CONSTANTS.WS_HEARTBEAT_TIME_INTERVAL - (
+                            self._time() - self._last_ws_message_sent_timestamp))
 
-        #                 await asyncio.wait_for(self._process_ws_messages(ws=ws), timeout=seconds_until_next_ping)
-        #             except asyncio.TimeoutError:
-        #                 ping_time = self._time()
-        #                 payload = {
-        #                     "ping": int(ping_time * 1e3)
-        #                 }
-        #                 print("inside exception code.................")
-        #                 ping_request = WSJSONRequest(payload=payload)
-        #                 await ws.send(request=ping_request)
-        #                 self._last_ws_message_sent_timestamp = ping_time
-        #     except asyncio.CancelledError:
-        #         raise
-        #     except Exception:
-        #         self.logger().error(
-        #             "Unexpected error occurred when listening to order book streams. Retrying in 5 seconds...",
-        #             exc_info=True,
-        #         )
-        #         await self._sleep(5.0)
-        #     finally:
-        #         ws and await ws.disconnect()
+                        await asyncio.wait_for(self._process_ws_messages(ws=ws), timeout=seconds_until_next_ping)
+                    except asyncio.TimeoutError:
+                        ping_time = self._time()
+                        payload = {
+                            "ping": int(ping_time * 1e3)
+                        }
+                        print("inside exception code.................")
+                        ping_request = WSJSONRequest(payload=payload)
+                        await ws.send(request=ping_request)
+                        self._last_ws_message_sent_timestamp = ping_time
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self.logger().error(
+                    "Unexpected error occurred when listening to order book streams. Retrying in 5 seconds...",
+                    exc_info=True,
+                )
+                await self._sleep(5.0)
+            finally:
+                ws and await ws.disconnect()
 
     async def _subscribe_channels(self, ws: WSAssistant):
         """
@@ -174,60 +173,58 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
         """
         # print(f"websocket inside _subscribe_channels func")
         # print(f"self trading_pairs ========> {self._trading_pairs}")
-        raise NotImplementedError
+        try:
+            for trading_pair in self._trading_pairs:
+                # symbol = await self._connector.exchange_symbol_associated_to_pair(trading_pair=trading_pair)
+                symbol = "MNTL-USDT"
+                # print(f"symbol printing =======> {symbol}")
+                # trade_payload = {
+                #     "topic": "trade",
+                #     "event": "sub",
+                #     "symbol": symbol,
+                #     "params": {
+                #         "binary": False
+                #     }
+                # }
+                # trade_payload = {
+                #     "event":"sub",
+                #     "params":{
+                #         "cb_id":"mntlusdt",
+                #         "channel":"market_mntlusdt_simple_depth_step0"
+                #     }
+                # }
+#
+                # subscribe_trade_request: WSJSONRequest = WSJSONRequest(payload=trade_payload)
 
-#         try:
-#             for trading_pair in self._trading_pairs:
-#                 # symbol = await self._connector.exchange_symbol_associated_to_pair(trading_pair=trading_pair)
-#                 symbol = "MNTL-USDT"
-#                 # print(f"symbol printing =======> {symbol}")
-#                 # trade_payload = {
-#                 #     "topic": "trade",
-#                 #     "event": "sub",
-#                 #     "symbol": symbol,
-#                 #     "params": {
-#                 #         "binary": False
-#                 #     }
-#                 # }
-#                 # trade_payload = {
-#                 #     "event":"sub",
-#                 #     "params":{
-#                 #         "cb_id":"mntlusdt",
-#                 #         "channel":"market_mntlusdt_simple_depth_step0"
-#                 #     }
-#                 # }
-# #
-#                 # subscribe_trade_request: WSJSONRequest = WSJSONRequest(payload=trade_payload)
+                # depth_payload = {
+                #     "topic": "diffDepth",
+                #     "event": "sub",
+                #     "symbol": symbol,
+                #     "params": {
+                #         "binary": False
+                #     }
+                # }
+                depth_payload = {
+                    "event":"sub",
+                    "params":{
+                        "cb_id":"mntlusdt",
+                        "channel":"market_mntlusdt_simple_depth_step0"
+                    }
+                }
+                subscribe_orderbook_request: WSJSONRequest = WSJSONRequest(payload=depth_payload)
 
-#                 # depth_payload = {
-#                 #     "topic": "diffDepth",
-#                 #     "event": "sub",
-#                 #     "symbol": symbol,
-#                 #     "params": {
-#                 #         "binary": False
-#                 #     }
-#                 # }
-#                 depth_payload = {
-#                     "event":"sub",
-#                     "params":{
-#                         "cb_id":"mntlusdt",
-#                         "channel":"market_mntlusdt_simple_depth_step0"
-#                     }
-#                 }
-#                 subscribe_orderbook_request: WSJSONRequest = WSJSONRequest(payload=depth_payload)
+                # await ws.send(subscribe_trade_request)
+                await ws.send(subscribe_orderbook_request)
 
-#                 # await ws.send(subscribe_trade_request)
-#                 await ws.send(subscribe_orderbook_request)
-
-#                 self.logger().info(f"Subscribed to public order book and trade channels of {trading_pair}...")
-#         except asyncio.CancelledError:
-#             raise
-#         except Exception:
-#             self.logger().error(
-#                 "Unexpected error occurred subscribing to order book trading and delta streams...",
-#                 exc_info=True
-#             )
-#             raise
+                self.logger().info(f"Subscribed to public order book and trade channels of {trading_pair}...")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self.logger().error(
+                "Unexpected error occurred subscribing to order book trading and delta streams...",
+                exc_info=True
+            )
+            raise
 
     async def _process_ws_messages(self, ws: WSAssistant):
         async for ws_response in ws.iter_messages():
@@ -244,10 +241,6 @@ class BitrueAPIOrderBookDataSource(OrderBookTrackerDataSource):
 
 
     async def _process_ob_snapshot(self, snapshot_queue: asyncio.Queue):
-        # raise NotImplementedError
-
-
-
         message_queue = self._message_queue[CONSTANTS.SNAPSHOT_EVENT_TYPE]
         while True:
             try:

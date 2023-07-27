@@ -58,7 +58,7 @@ class BitrueAuth(AuthBase):
         request_params = params or {}
         request_params["timestamp"] = timestamp
         # request_params["api_key"] = self.api_key
-        symbol = 'LTCBTC'
+        symbol = 'MNTLUSDT'
         request_params["symbol"] = symbol
         request_params = self.keysort(request_params)
         signature = self._generate_signature(params=request_params)
@@ -71,20 +71,21 @@ class BitrueAuth(AuthBase):
         # print(f"digest ========> {digest}")
         return digest
 
-    # def generate_ws_authentication_message(self):
-    #     """
-    #     Generates the authentication message to start receiving messages from
-    #     the 3 private ws channels
-    #     """
-    #     expires = int((self.time_provider.time() + 10) * 1e3)
-    #     _val = f'GET/realtime{expires}'
-    #     signature = hmac.new(self.secret_key.encode("utf8"),
-    #                          _val.encode("utf8"), hashlib.sha256).hexdigest()
-    #     auth_message = {
-    #         "op": "auth",
-    #         "args": [self.api_key, expires, signature]
-    #     }
-    #     return auth_message
+    def generate_ws_authentication_message(self):
+        """
+        Generates the authentication message to start receiving messages from
+        the 3 private ws channels
+        """
+        print("inside generate_ws_authentication_message func ..........")
+        expires = int((self.time_provider.time() + 10) * 1e3)
+        _val = f'GET/realtime{expires}'
+        signature = hmac.new(self.secret_key.encode("utf8"),
+                             _val.encode("utf8"), hashlib.sha256).hexdigest()
+        auth_message = {
+            "op": "auth",
+            "args": [self.api_key, expires, signature]
+        }
+        return auth_message
 
     def _time(self):
         return time.time()
