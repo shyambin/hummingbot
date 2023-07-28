@@ -77,13 +77,20 @@ class BitrueAuth(AuthBase):
         the 3 private ws channels
         """
         print("inside generate_ws_authentication_message func ..........")
-        expires = int((self.time_provider.time() + 10) * 1e3)
-        _val = f'GET/realtime{expires}'
-        signature = hmac.new(self.secret_key.encode("utf8"),
-                             _val.encode("utf8"), hashlib.sha256).hexdigest()
+        # expires = int((self.time_provider.time() + 10) * 1e3)
+        # _val = f'GET/realtime{expires}'
+        # signature = hmac.new(self.secret_key.encode("utf8"),
+        #                      _val.encode("utf8"), hashlib.sha256).hexdigest()
+        # auth_message = {
+        #     "op": "auth",
+        #     "args": [self.api_key, expires, signature]
+        # }
         auth_message = {
-            "op": "auth",
-            "args": [self.api_key, expires, signature]
+            "event":"sub",
+            "params":{
+                "cb_id":"mntlusdt",
+                "channel":"market_mntlusdt_simple_depth_step0"
+            }
         }
         return auth_message
 

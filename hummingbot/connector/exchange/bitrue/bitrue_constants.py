@@ -18,7 +18,7 @@ REST_URLS = "https://openapi.bitrue.com"
 # API_VERSION = "/api/v1"
 
 WSS_URL = "wss://ws.bitrue.com/market/ws"
-
+BASE_WS_STREAM_URL = "wss://wsapi.bitrue.com/stream"
 # Websocket event types
 DIFF_EVENT_TYPE = "diffDepth"
 TRADE_EVENT_TYPE = "trade"
@@ -58,6 +58,7 @@ WITHDRAW_HISTORY = "/api/v1/withdraw/history"
 DEPOSIT_HISTORY = "/api/v1/deposit/history"
 
 # POSEIDON
+USER_DATA_STREAM_URL = "https://open.bitrue.com"
 CREATE_LISTENKEY = "/poseidon/api/v1/listenKey"
 KEEPALIVE_LISTENKEY = "/poseidon/api/v1/listenKey" # Keepalive (have to pass listenkey to keep it alive for 30 mins)
 CLOSE_LISTENKEY = "/poseidon/api/v1/listenKey" # Close a listenkey which was created via POST (have to pass listenkey)
